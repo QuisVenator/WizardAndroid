@@ -1,0 +1,162 @@
+package com.renepauls.kingsandfools;
+
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ServerValue;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class GameLogic {
+    private static boolean isHost;
+    private String trump = null;
+    private String leading = null;
+    private String playerKey;
+    private String name = "Anonimous";
+    private Card currentWinning;
+
+    private static final int sessionIdCharacterCount = 5;
+    private static final String validSessionCharacters = "ABCDEFGHIJKLMNPQRSTUVWXYZ123456789";
+    private String sessionId;
+    private Session currentSession = new Session();
+    private FirebaseDatabase database = FirebaseDatabase.getInstance();
+    private DatabaseReference sessionReference = null;
+
+    public boolean allowedToPlay(Card card, Hand hand) {
+        if(leading == null) return true;
+        if(card.getType().equals(leading)) return true;
+        if(!hand.hasType(leading)) return true;
+        if(card.getType().equals("wizard") || card.getType().equals("jester")) return true;
+        return false;
+    }
+
+    public boolean playCard(Card card, Hand hand) {
+        if(!allowedToPlay(card, hand)) return false;
+
+        updateTrumpAndWinning(card);
+
+        //TODO animate shit
+        //TODO update database and pass turn
+        hand.remove(card);
+
+        return true;
+    }
+
+    public void joinGame(String id) {
+        sessionId = id.toUpperCase();
+
+        sessionReference = database.getReference("sessions/"+sessionId);
+        sessionReference.child("open").get().addOnCompleteListener(new OnCompleteListener<DataSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DataSnapshot> task) {
+                if (!task.isSuccessful()) {
+                    Log.e("firebase", "Error getting data", task.getException());
+                }
+                else {
+                    if(task.getResult().getValue() != null && (boolean)task.getResult().getValue()){
+                        addPlayer();
+                    } else {
+                        Log.d("Placeholder", "Game doesn't exist or is closed");
+                    }
+                }
+            }
+        });
+
+        isHost = false;
+    }
+    public String hostGame() {
+        DatabaseReference myRef = database.getReference("sessions");
+
+        sessionId = generateSessionId();
+        myRef.child(sessionId).setValue(currentSession);
+        sessionReference = myRef.child(sessionId);
+        isHost = true;
+
+        playerKey = addPlayer();
+        return sessionId;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    private void updateTrumpAndWinning(Card card) {
+        //if this is first card played
+        if(currentWinning == null) {
+            currentWinning = card;
+            trump = currentWinning.getType();
+        }
+        //if the winning card is a jester and this one is not (first jester always wins)
+        else if(currentWinning.getType().equals("jester") && !card.getType().equals("jester")) {
+            currentWinning = card;
+            trump = currentWinning.getType();
+        }
+        //if the winning card is a wizard, that can't be beat (first wizard always wins)
+        else if(currentWinning.getType().equals("wizard"))
+        { /*nothing*/ }
+        //if the wining is not a wizard, but a wizard was played
+        else if(card.getType().equals("wizard"))
+            currentWinning = card;
+            //if trump is winning and no trump was played
+        else if(currentWinning.getType().equals(trump) && !card.getType().equals(trump))
+        { /*nothing*/ }
+        //at least one card isn't trump, so if they are equal they must both be leading
+        else if (currentWinning.getType().equals(card.getType()) && currentWinning.getValue() < card.getValue())
+            currentWinning = card;
+    }
+
+    private String addPlayer() {
+        //TODO get some way to let players choose a name
+        DatabaseReference childRef = sessionReference.child("playerList").push();
+        String playerKey = childRef.getKey();
+        childRef.setValue(name);
+        sessionReference.child("playerCount").setValue(ServerValue.increment(1));
+
+        return playerKey;
+    }
+
+    private void endTurn(Card card) {
+        //update locally
+        currentSession.lastCardPlayed = card;
+        currentSession.turnStarted = System.currentTimeMillis();
+        currentSession.currentTurn += 1;
+        currentSession.currentTurn /= currentSession.playerCount;
+
+        //prepare update for database
+        Map<String, Object> childUpdates = new HashMap<>();
+        childUpdates.put("/lastCardPlayed", currentSession.lastCardPlayed);
+        childUpdates.put("/turnStarted", currentSession.turnStarted);
+        childUpdates.put("/currentTurn", currentSession.currentTurn);
+
+        //update database
+        sessionReference.updateChildren(childUpdates);
+    }
+
+    private static String generateSessionId() {
+        String sessionId = "";
+        for(int i = 0; i < sessionIdCharacterCount; i++) {
+            int charAt = (int)(Math.random()* validSessionCharacters.length());
+            sessionId += validSessionCharacters.charAt(charAt);
+        }
+        return sessionId;
+    }
+
+    private void startGame() {
+        //update locally
+        currentSession.open = false;
+
+        //prepare update for database
+        Map<String, Object> childUpdates = new HashMap<>();
+        childUpdates.put("/open", currentSession.open);
+
+        //update database
+        sessionReference.updateChildren(childUpdates);
+    }
+}
