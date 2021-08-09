@@ -81,19 +81,9 @@ public class MainActivity extends AppCompatActivity {
             card.setLayoutParams(params);
 
             if(i < 10)
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        cardsParent.addView(card);
-                    }
-                }, 200*i);
+                handler.postDelayed(() -> cardsParent.addView(card), 200*i);
             else
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        cardsParent2.addView(card);
-                    }
-                }, 200*i);
+                handler.postDelayed(() -> cardsParent2.addView(card), 200*i);
         }
     }
 
@@ -170,12 +160,9 @@ public class MainActivity extends AppCompatActivity {
                 card.setTranslationY(originalY - newY);
                 ViewGroup mainLayout = (ViewGroup)findViewById(R.id.mainLayout);
                 mainLayout.getOverlay().add(card);
-                card.animate().translationX(0).translationY(0).rotation((float) (Math.random()*180)).withEndAction(new Runnable() {
-                    @Override
-                    public void run() {
-                        mainLayout.getOverlay().remove(card);
-                        playedCardsRow.addView(card);
-                    }
+                card.animate().translationX(0).translationY(0).rotation((float) (Math.random()*180)).withEndAction(() -> {
+                    mainLayout.getOverlay().remove(card);
+                    playedCardsRow.addView(card);
                 });
                 return true;
             }
