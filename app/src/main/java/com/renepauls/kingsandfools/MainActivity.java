@@ -29,24 +29,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+    private MyApp app;
     private static double cardAspectRatio = 208.0/303.0;
     private float screenWidth;
     private float screenHeight;
-    private GameLogic gameLogic;
     private Deck cardDeck = new Deck();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        app = (MyApp) getApplication();
 
         final DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
         screenWidth = displayMetrics.widthPixels;
         screenHeight = displayMetrics.heightPixels;
 
         Deck.initialize(getApplicationContext());
-
-        gameLogic = new GameLogic();
     }
 
     public void addCards(List<Card> cards) {
@@ -194,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
         gameLogic.joinGame(id);
         */
 
-        String id = gameLogic.hostGame();
+        String id = app.gameLogic.hostGame();
 
         Toast toast = Toast.makeText(getApplicationContext(), id,
                 Toast.LENGTH_LONG);
