@@ -29,6 +29,10 @@ public class GameLogic {
     private FirebaseDatabase database = FirebaseDatabase.getInstance();
     private DatabaseReference sessionReference = null;
 
+    public String getSessionId() {
+        return sessionId;
+    }
+
     public boolean allowedToPlay(Card card, Hand hand) {
         if(leading == null) return true;
         if(card.getType().equals(leading)) return true;

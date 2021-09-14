@@ -28,6 +28,7 @@
             android:id="@+id/button11"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:onClick="joinGame"
             android:text="Join Game"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
