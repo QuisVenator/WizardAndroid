@@ -3,13 +3,17 @@ package com.renepauls.kingsandfools;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -57,6 +61,7 @@ public class GameLogic {
         sessionId = id.toUpperCase();
 
         sessionReference = database.getReference("sessions/"+sessionId);
+        subscribePlayerList();
         sessionReference.child("open").get().addOnCompleteListener(new OnCompleteListener<DataSnapshot>() {
             @Override
             public void onComplete(@NonNull Task<DataSnapshot> task) {
@@ -65,7 +70,7 @@ public class GameLogic {
                 }
                 else {
                     if(task.getResult().getValue() != null && (boolean)task.getResult().getValue()){
-                        addPlayer();
+                        playerKey = addPlayer();
                     } else {
                         Log.d("Placeholder", "Game doesn't exist or is closed");
                     }
@@ -82,13 +87,46 @@ public class GameLogic {
         myRef.child(sessionId).setValue(currentSession);
         sessionReference = myRef.child(sessionId);
         isHost = true;
+        subscribePlayerList();
 
         playerKey = addPlayer();
         return sessionId;
     }
+    private void subscribePlayerList() {
+        sessionReference.child("playerList").addChildEventListener(new ChildEventListener() {
+            // This also fires once for every item already in the list
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+                Log.d("datachange", snapshot.getValue().toString());
+            }
+
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+                // Todo throw exception
+            }
+
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
+                // Todo handle player leave
+            }
+
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+                // Todo not sure how to handle. Sholdn't normally happen
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // Todo throw exception
+            }
+        });
+    }
 
     public void setName(String name) {
         this.name = name;
+    }
+    public String getName() {
+        return name;
     }
 
     private void updateTrumpAndWinning(Card card) {
@@ -117,7 +155,7 @@ public class GameLogic {
     }
 
     private String addPlayer() {
-        //TODO get some way to let players choose a name
+        // TODO get some way to let players choose a name
         DatabaseReference childRef = sessionReference.child("playerList").push();
         String playerKey = childRef.getKey();
         childRef.setValue(name);
@@ -127,19 +165,19 @@ public class GameLogic {
     }
 
     private void endTurn(Card card) {
-        //update locally
+        // update locally
         currentSession.lastCardPlayed = card;
         currentSession.turnStarted = System.currentTimeMillis();
         currentSession.currentTurn += 1;
         currentSession.currentTurn /= currentSession.playerCount;
 
-        //prepare update for database
+        // prepare update for database
         Map<String, Object> childUpdates = new HashMap<>();
         childUpdates.put("/lastCardPlayed", currentSession.lastCardPlayed);
         childUpdates.put("/turnStarted", currentSession.turnStarted);
         childUpdates.put("/currentTurn", currentSession.currentTurn);
 
-        //update database
+        // update database
         sessionReference.updateChildren(childUpdates);
     }
 
