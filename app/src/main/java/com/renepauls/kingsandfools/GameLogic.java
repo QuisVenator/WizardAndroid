@@ -102,7 +102,7 @@ public class GameLogic {
 
             @Override
             public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
-                // Todo throw exception
+                throw new RuntimeException("Unexpected database event, player in list changed");
             }
 
             @Override
@@ -112,12 +112,12 @@ public class GameLogic {
 
             @Override
             public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
-                // Todo not sure how to handle. Sholdn't normally happen
+                throw new RuntimeException("Unexpected database event, player moved?");
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // Todo throw exception
+                throw new RuntimeException("Unexpected database event, list of players deleted");
             }
         });
     }
