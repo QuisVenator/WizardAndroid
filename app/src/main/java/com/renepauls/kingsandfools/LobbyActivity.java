@@ -7,7 +7,7 @@ import android.util.Log;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-public class LobbyActivity extends AppCompatActivity {
+public class LobbyActivity extends AppCompatActivity implements IPlayerList {
     private MyApp app;
     private LinearLayout playerList;
 
@@ -20,10 +20,10 @@ public class LobbyActivity extends AppCompatActivity {
         ((TextView)findViewById(R.id.textViewLobby)).append(app.gameLogic.getSessionId());
         playerList = findViewById(R.id.playerList);
 
-        addPlayerToList(app.gameLogic.getName());
+        app.gameLogic.subscribePlayerList(this);
     }
 
-    private void addPlayerToList(String name) {
+    public void addPlayerToList(String name) {
         TextView newPlayer = new TextView(this);
         newPlayer.setText(name);
 

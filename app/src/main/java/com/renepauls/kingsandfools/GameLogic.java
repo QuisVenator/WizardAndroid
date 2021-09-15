@@ -48,6 +48,7 @@ public class GameLogic {
     public boolean playCard(Card card, Hand hand) {
         if(!allowedToPlay(card, hand)) return false;
 
+        hand.remove(card);
         updateTrumpAndWinning(card);
 
         //TODO animate shit
@@ -61,7 +62,6 @@ public class GameLogic {
         sessionId = id.toUpperCase();
 
         sessionReference = database.getReference("sessions/"+sessionId);
-        subscribePlayerList();
         sessionReference.child("open").get().addOnCompleteListener(new OnCompleteListener<DataSnapshot>() {
             @Override
             public void onComplete(@NonNull Task<DataSnapshot> task) {
@@ -73,6 +73,7 @@ public class GameLogic {
                         playerKey = addPlayer();
                     } else {
                         Log.d("Placeholder", "Game doesn't exist or is closed");
+                        return;
                     }
                 }
             }
@@ -87,17 +88,16 @@ public class GameLogic {
         myRef.child(sessionId).setValue(currentSession);
         sessionReference = myRef.child(sessionId);
         isHost = true;
-        subscribePlayerList();
 
         playerKey = addPlayer();
         return sessionId;
     }
-    private void subscribePlayerList() {
+    public void subscribePlayerList(IPlayerList playerList) {
         sessionReference.child("playerList").addChildEventListener(new ChildEventListener() {
             // This also fires once for every item already in the list
             @Override
             public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
-                Log.d("datachange", snapshot.getValue().toString());
+                playerList.addPlayerToList(snapshot.getValue().toString());
             }
 
             @Override
