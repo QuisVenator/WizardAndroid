@@ -107,7 +107,7 @@ public class GameLogic {
 
             @Override
             public void onChildRemoved(@NonNull DataSnapshot snapshot) {
-                // Todo handle player leave
+                playerList.removePlayerFromList(snapshot.getValue().toString());
             }
 
             @Override

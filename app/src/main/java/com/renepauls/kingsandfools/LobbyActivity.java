@@ -30,6 +30,16 @@ public class LobbyActivity extends AppCompatActivity implements IPlayerList {
         playerList.addView(newPlayer);
     }
 
+    public void removePlayerFromList(String name) {
+        for(int i = 0; i < playerList.getChildCount(); i++) {
+            TextView playerView = (TextView) playerList.getChildAt(i);
+            if(playerView.getText().equals(name)) {
+                playerList.removeView(playerView);
+                return;
+            }
+        }
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
