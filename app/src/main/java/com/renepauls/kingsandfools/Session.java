@@ -1,7 +1,10 @@
 package com.renepauls.kingsandfools;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -14,8 +17,9 @@ public class Session {
 
     public Session() {
         this.playerCount = playerCount;
-        currentTurn = 0;
-        playerCount = 1;
+        currentTurn = -1;
+        playerCount = 0;
         turnStarted = (new Date()).getTime();
     }
+
 }

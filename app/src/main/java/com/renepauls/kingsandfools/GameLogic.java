@@ -1,6 +1,8 @@
 package com.renepauls.kingsandfools;
 
+import android.renderscript.Sampler;
 import android.util.Log;
+import java.util.*;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -22,22 +24,28 @@ public class GameLogic {
     private static boolean isHost;
     private String trump = null;
     private String leading = null;
-    private String playerKey;
     private String name = "Anonimous";
     private Card currentWinning;
 
     private static final int sessionIdCharacterCount = 5;
     private static final String validSessionCharacters = "ABCDEFGHIJKLMNPQRSTUVWXYZ123456789";
     private String sessionId;
-    private Session currentSession = new Session();
+    private Session currentSession;
     private FirebaseDatabase database = FirebaseDatabase.getInstance();
     private DatabaseReference sessionReference = null;
+    private ChildEventListener playerAddListener;
+    private ValueEventListener turnListener;
+    private ValueEventListener cardPlayedListener;
+    private int myTurn;
+    private String playerKey;
+    private HashMap<String, String> connectedPlayersDict = new HashMap<>();
 
     public String getSessionId() {
         return sessionId;
     }
 
     public boolean allowedToPlay(Card card, Hand hand) {
+        if(!hasTurn()) return false;
         if(leading == null) return true;
         if(card.getType().equals(leading)) return true;
         if(!hand.hasType(leading)) return true;
@@ -51,14 +59,16 @@ public class GameLogic {
         hand.remove(card);
         updateTrumpAndWinning(card);
 
-        //TODO animate shit
-        //TODO update database and pass turn
+        // TODO animate shit
+        // TODO update database and pass turn
+        endTurn(card);
         hand.remove(card);
 
         return true;
     }
 
-    public void joinGame(String id) {
+    public void joinGame(String id, MainMenuActivity menu) {
+        currentSession = new Session();
         sessionId = id.toUpperCase();
 
         sessionReference = database.getReference("sessions/"+sessionId);
@@ -67,13 +77,15 @@ public class GameLogic {
             public void onComplete(@NonNull Task<DataSnapshot> task) {
                 if (!task.isSuccessful()) {
                     Log.e("firebase", "Error getting data", task.getException());
+                    menu.joinGame(id, GameLogicCodes.DATABASE_ERROR);
                 }
                 else {
                     if(task.getResult().getValue() != null && (boolean)task.getResult().getValue()){
                         playerKey = addPlayer();
+                        menu.joinGame(id, GameLogicCodes.SUCCESS);
                     } else {
                         Log.d("Placeholder", "Game doesn't exist or is closed");
-                        return;
+                        menu.joinGame(id, GameLogicCodes.GAME_NOT_FOUND_OR_CLOSED);
                     }
                 }
             }
@@ -82,6 +94,7 @@ public class GameLogic {
         isHost = false;
     }
     public String hostGame() {
+        currentSession = new Session();
         DatabaseReference myRef = database.getReference("sessions");
 
         sessionId = generateSessionId();
@@ -93,10 +106,14 @@ public class GameLogic {
         return sessionId;
     }
     public void subscribePlayerList(IPlayerList playerList) {
-        sessionReference.child("playerList").addChildEventListener(new ChildEventListener() {
+        playerAddListener = sessionReference.child("playerList").addChildEventListener(new ChildEventListener() {
             // This also fires once for every item already in the list
             @Override
             public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+                addPlayer(snapshot.getKey(), snapshot.getValue().toString());
+                if(snapshot.getKey().equals(playerKey)) {
+                    setTurnNow();
+                }
                 playerList.addPlayerToList(snapshot.getValue().toString());
             }
 
@@ -107,6 +124,7 @@ public class GameLogic {
 
             @Override
             public void onChildRemoved(@NonNull DataSnapshot snapshot) {
+                removePlayer(snapshot.getKey());
                 playerList.removePlayerFromList(snapshot.getValue().toString());
             }
 
@@ -120,6 +138,45 @@ public class GameLogic {
                 throw new RuntimeException("Unexpected database event, list of players deleted");
             }
         });
+    }
+    private void onTurnSubscriber() {
+        turnListener = sessionReference.child("currentTurn").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                currentSession.currentTurn = (int) snapshot.getValue();
+                if(hasTurn()) {
+                    // TODO inform that currently has turn
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // TODO throw exception?
+            }
+        });
+    }
+    private void onCardPlayedSubscriber() {
+        cardPlayedListener = sessionReference.child("lastCardPlayed").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                // TODO animate and shit
+                currentSession.lastCardPlayed = snapshot.getValue(Card.class);
+                updateTrumpAndWinning(currentSession.lastCardPlayed);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // TODO throw exception?
+            }
+        });
+    }
+
+    public int getConnectedPlayerCount() {
+        return currentSession.playerCount;
+    }
+
+    public boolean isHost() {
+        return isHost;
     }
 
     public void setName(String name) {
@@ -181,6 +238,18 @@ public class GameLogic {
         sessionReference.updateChildren(childUpdates);
     }
 
+    public void addPlayer(String key, String playerName) {
+        connectedPlayersDict.put(key, playerName);
+        currentSession.playerCount++;
+    }
+    public void removePlayer(String key) {
+        connectedPlayersDict.remove(key);
+    }
+
+    public void setTurnNow() {
+        myTurn = currentSession.playerCount-1;
+    }
+
     private static String generateSessionId() {
         String sessionId = "";
         for(int i = 0; i < sessionIdCharacterCount; i++) {
@@ -190,7 +259,11 @@ public class GameLogic {
         return sessionId;
     }
 
-    private void startGame() {
+    private boolean hasTurn() {
+        return currentSession != null && currentSession.currentTurn != -1 && myTurn != -1 && currentSession.currentTurn == myTurn;
+    }
+
+    public void startGame() {
         //update locally
         currentSession.open = false;
 
@@ -200,5 +273,20 @@ public class GameLogic {
 
         //update database
         sessionReference.updateChildren(childUpdates);
+    }
+
+    public void removeListeners() {
+        if(playerAddListener != null) {
+            sessionReference.child("playerList").removeEventListener(playerAddListener);
+            playerAddListener = null;
+        }
+        if(turnListener != null) {
+            sessionReference.child("currentTurn").removeEventListener(turnListener);
+            turnListener = null;
+        }
+        if(cardPlayedListener != null) {
+            sessionReference.child("lastCardPlayed").removeEventListener(cardPlayedListener);
+            cardPlayedListener = null;
+        }
     }
 }

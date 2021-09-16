@@ -12,8 +12,12 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.android.material.snackbar.BaseTransientBottomBar;
+import com.google.android.material.snackbar.Snackbar;
+
 public class MainMenuActivity extends AppCompatActivity {
     private MyApp app;
+    private View lastView;
 
 
     @Override
@@ -30,11 +34,13 @@ public class MainMenuActivity extends AppCompatActivity {
     }
 
     public void joinGame(View view) {
+        lastView = view;
         // Show dialog asking for lobby code
         final EditText txtUrl = new EditText(this);
 
         // Set the default text
         txtUrl.setHint("Lobby Code");
+        MainMenuActivity menu = this;
 
         new AlertDialog.Builder(this)
                 .setTitle("Lobby Code")
@@ -43,7 +49,7 @@ public class MainMenuActivity extends AppCompatActivity {
                 .setPositiveButton("Join", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
                         String lobbyCode = txtUrl.getText().toString();
-                        joinGame(lobbyCode);
+                        app.gameLogic.joinGame(lobbyCode, menu);
                     }
                 })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -56,10 +62,21 @@ public class MainMenuActivity extends AppCompatActivity {
     }
 
     // Gets called by dialog
-    public void joinGame(String lobbyCode) {
-        Log.d("joingame", lobbyCode);
-        app.gameLogic.joinGame(lobbyCode);
-        Intent intentLobby = new Intent(this, LobbyActivity.class);
-        startActivity(intentLobby);
+    public void joinGame(String lobbyCode, GameLogicCodes code) {
+        Log.d("joingame", code.toString());
+        Snackbar mySnackbar = Snackbar.make(lastView, "placeholder", BaseTransientBottomBar.LENGTH_LONG);
+        switch (code) {
+            case SUCCESS:
+                Intent intentLobby = new Intent(this, LobbyActivity.class);
+                startActivity(intentLobby);
+                return;
+            case DATABASE_ERROR:
+                mySnackbar.setText("Unexpected error, please contact devs");
+                break;
+            case GAME_NOT_FOUND_OR_CLOSED:
+                mySnackbar.setText("Could not find that game. Are you online?");
+                break;
+        }
+        mySnackbar.show();
     }
 }

@@ -4,8 +4,12 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import com.google.android.material.snackbar.BaseTransientBottomBar;
+import com.google.android.material.snackbar.Snackbar;
 
 public class LobbyActivity extends AppCompatActivity implements IPlayerList {
     private MyApp app;
@@ -40,9 +44,23 @@ public class LobbyActivity extends AppCompatActivity implements IPlayerList {
         }
     }
 
+    public void startGame(View view) {
+        if(app.gameLogic.getConnectedPlayerCount() >= 3 && app.gameLogic.isHost()) {
+            app.gameLogic.startGame();
+        } else if(app.gameLogic.isHost()) {
+            Snackbar mySnackbar = Snackbar.make(view, "Need at least 3 players to start", BaseTransientBottomBar.LENGTH_LONG);
+            mySnackbar.show();
+        } else {
+            Snackbar mySnackbar = Snackbar.make(view, "Only the host can start the game", BaseTransientBottomBar.LENGTH_LONG);
+            mySnackbar.show();
+        }
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d("lifecycle", String.valueOf(this.isFinishing()));
+        // Remove all listeners from database
+        app.gameLogic.removeListeners();
+        Log.d("playerTurn", String.valueOf(this.isFinishing()));
     }
 }
