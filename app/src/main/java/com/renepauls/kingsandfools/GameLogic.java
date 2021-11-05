@@ -1,5 +1,6 @@
 package com.renepauls.kingsandfools;
 
+import android.content.Intent;
 import android.renderscript.Sampler;
 import android.util.Log;
 import java.util.*;
@@ -36,9 +37,13 @@ public class GameLogic {
     private ChildEventListener playerAddListener;
     private ValueEventListener turnListener;
     private ValueEventListener cardPlayedListener;
+    private ValueEventListener startGameListener;
     private int myTurn;
     private String playerKey;
     private HashMap<String, String> connectedPlayersDict = new HashMap<>();
+
+    //TODO this is bad, do MVVM
+    public LobbyActivity lobbyActivity = null;
 
     public String getSessionId() {
         return sessionId;
@@ -82,6 +87,7 @@ public class GameLogic {
                 else {
                     if(task.getResult().getValue() != null && (boolean)task.getResult().getValue()){
                         playerKey = addPlayer();
+                        subscribeToGameStart();
                         menu.joinGame(id, GameLogicCodes.SUCCESS);
                     } else {
                         Log.d("Placeholder", "Game doesn't exist or is closed");
@@ -103,6 +109,7 @@ public class GameLogic {
         isHost = true;
 
         playerKey = addPlayer();
+        subscribeToGameStart();
         return sessionId;
     }
     public void subscribePlayerList(IPlayerList playerList) {
@@ -162,6 +169,24 @@ public class GameLogic {
                 // TODO animate and shit
                 currentSession.lastCardPlayed = snapshot.getValue(Card.class);
                 updateTrumpAndWinning(currentSession.lastCardPlayed);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // TODO throw exception?
+            }
+        });
+    }
+    private void subscribeToGameStart() {
+        startGameListener = sessionReference.child("open").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(!(boolean) snapshot.getValue()) {
+                    lobbyActivity.startGame();
+                    return;
+                } else {
+                    Log.d("startgame", "What?");
+                }
             }
 
             @Override
@@ -264,6 +289,7 @@ public class GameLogic {
     }
 
     public void startGame() {
+        Log.d("startgame", "function called");
         //update locally
         currentSession.open = false;
 
@@ -287,6 +313,10 @@ public class GameLogic {
         if(cardPlayedListener != null) {
             sessionReference.child("lastCardPlayed").removeEventListener(cardPlayedListener);
             cardPlayedListener = null;
+        }
+        if(startGameListener != null) {
+            sessionReference.child("open").removeEventListener(startGameListener);
+            startGameListener = null;
         }
     }
 }

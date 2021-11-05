@@ -2,6 +2,7 @@ package com.renepauls.kingsandfools;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -25,6 +26,7 @@ public class LobbyActivity extends AppCompatActivity implements IPlayerList {
         playerList = findViewById(R.id.playerList);
 
         app.gameLogic.subscribePlayerList(this);
+        app.gameLogic.lobbyActivity = this;
     }
 
     public void addPlayerToList(String name) {
@@ -62,5 +64,12 @@ public class LobbyActivity extends AppCompatActivity implements IPlayerList {
         // Remove all listeners from database
         app.gameLogic.removeListeners();
         Log.d("playerTurn", String.valueOf(this.isFinishing()));
+    }
+
+    public void startGame() {
+        Log.d("startgame", "Starting activity...");
+        Intent intentGame = new Intent(this, MainActivity.class);
+        startActivity(intentGame);
+        return;
     }
 }
