@@ -1,7 +1,5 @@
 package com.renepauls.kingsandfools;
 
-import android.content.Intent;
-import android.renderscript.Sampler;
 import android.util.Log;
 import java.util.*;
 
@@ -23,8 +21,8 @@ import java.util.Map;
 
 public class GameLogic {
     private static boolean isHost;
+    private String lead = null;
     private String trump = null;
-    private String leading = null;
     private String name = "Anonimous";
     private Card currentWinning;
     private Hand currentHand;
@@ -57,9 +55,9 @@ public class GameLogic {
 
     public boolean allowedToPlay(Card card, Hand hand) {
         if(!hasTurn()) return false;
-        if(leading == null) return true;
-        if(card.getType().equals(leading)) return true;
-        if(!hand.hasType(leading)) return true;
+        if(lead == null) return true;
+        if(card.getType().equals(lead)) return true;
+        if(!hand.hasType(lead)) return true;
         if(card.getType().equals("wizard") || card.getType().equals("jester")) return true;
         return false;
     }
@@ -68,7 +66,7 @@ public class GameLogic {
         if(!allowedToPlay(card, hand)) return false;
 
         hand.remove(card);
-        updateTrumpAndWinning(card);
+        updateLeadAndWinning(card);
 
         // TODO animate shit
         // TODO update database and pass turn
@@ -174,7 +172,7 @@ public class GameLogic {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 // TODO animate and shit
                 currentSession.lastCardPlayed = snapshot.getValue(Card.class);
-                updateTrumpAndWinning(currentSession.lastCardPlayed);
+                updateLeadAndWinning(currentSession.lastCardPlayed);
             }
 
             @Override
@@ -215,8 +213,11 @@ public class GameLogic {
         trumpListener = sessionReference.child("trump").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if(snapshot.getValue() != null)
-                    mainActivity.setTrump(snapshot.getValue(Card.class));
+                if(snapshot.getValue() != null) {
+                    Card trumpCard = snapshot.getValue(Card.class);
+                    trump = trumpCard.getType();
+                    mainActivity.setTrump(trumpCard);
+                }
             }
 
             @Override
@@ -227,7 +228,8 @@ public class GameLogic {
         dealerToChoseTrumpListener = sessionReference.child("trump").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // TODO implement gui for this
+                if(snapshot.getValue() != null)
+                    return; // TODO implement gui for this
             }
 
             @Override
@@ -258,16 +260,16 @@ public class GameLogic {
         return name;
     }
 
-    private void updateTrumpAndWinning(Card card) {
+    private void updateLeadAndWinning(Card card) {
         //if this is first card played
         if(currentWinning == null) {
             currentWinning = card;
-            trump = currentWinning.getType();
+            lead = currentWinning.getType();
         }
         //if the winning card is a jester and this one is not (first jester always wins)
         else if(currentWinning.getType().equals("jester") && !card.getType().equals("jester")) {
             currentWinning = card;
-            trump = currentWinning.getType();
+            lead = currentWinning.getType();
         }
         //if the winning card is a wizard, that can't be beat (first wizard always wins)
         else if(currentWinning.getType().equals("wizard"))
@@ -276,7 +278,7 @@ public class GameLogic {
         else if(card.getType().equals("wizard"))
             currentWinning = card;
             //if trump is winning and no trump was played
-        else if(currentWinning.getType().equals(trump) && !card.getType().equals(trump))
+        else if(currentWinning.getType().equals(lead) && !card.getType().equals(lead))
         { /*nothing*/ }
         //at least one card isn't trump, so if they are equal they must both be leading
         else if (currentWinning.getType().equals(card.getType()) && currentWinning.getValue() < card.getValue())
@@ -334,11 +336,11 @@ public class GameLogic {
             // TODO create appropriate listener
             sessionReference.child("dealerToChoseTrump").setValue((roundNumber - 1) % getConnectedPlayerCount());
         else
-            setTrump(trump);
+            setLead(trump);
     }
 
-    public void setTrump(Card trump) {
-        sessionReference.child("trump").setValue(trump);
+    public void setLead(Card lead) {
+        sessionReference.child("trump").setValue(lead);
     }
 
     public void addPlayer(String key, String playerName) {
