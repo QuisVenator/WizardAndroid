@@ -10,7 +10,7 @@ import java.util.Map;
 
 public class Deck {
     private static final String[] sets = {"clubs", "diamonds", "hearts", "spades"};
-    private static Map<String, Card> availableCards;
+    public static Map<String, Card> availableCards;
     private List<Card> shuffled;
     private int index = 0;
 
@@ -25,6 +25,18 @@ public class Deck {
                 resId = context.getResources().getIdentifier(resourceName, "drawable", context.getPackageName());
                 availableCards.put(set+"_"+i, new Card(set, i, resourceName, resId));
             }
+        }
+
+        // Add 4 wizard and 4 jester
+        String resourceName =  "wizard";
+        int resId = context.getResources().getIdentifier(resourceName, "drawable", context.getPackageName());
+        for(int i = 0; i < 4; i++) {
+            availableCards.put(resourceName+i, new Card("wizard", 0, resourceName, resId));
+        }
+        resourceName =  "jester";
+        resId = context.getResources().getIdentifier(resourceName, "drawable", context.getPackageName());
+        for(int i = 0; i < 4; i++) {
+            availableCards.put(resourceName+i, new Card("jester", 0, resourceName, resId));
         }
     }
 

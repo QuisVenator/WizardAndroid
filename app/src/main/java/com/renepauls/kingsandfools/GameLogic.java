@@ -39,13 +39,13 @@ public class GameLogic {
     private ValueEventListener cardPlayedListener;
     private ValueEventListener startGameListener;
     private ValueEventListener handListener;
+    //TODO remove next two listeners
     private ValueEventListener trumpListener;
-    private ValueEventListener dealerToChoseTrumpListener;
+    private ValueEventListener dealerToChooseTrumpListener;
     private int myTurn;
     private String playerKey;
     private HashMap<String, String> connectedPlayersDict = new HashMap<>();
 
-    //TODO this is (probably) bad
     public LobbyActivity lobbyActivity = null;
     public MainActivity mainActivity = null;
 
@@ -55,6 +55,7 @@ public class GameLogic {
 
     public boolean allowedToPlay(Card card, Hand hand) {
         if(!hasTurn()) return false;
+        if(trump == "wizard") return false; // In this case we assume that the dealer is still choosing a trump
         if(lead == null) return true;
         if(card.getType().equals(lead)) return true;
         if(!hand.hasType(lead)) return true;
@@ -122,10 +123,11 @@ public class GameLogic {
             @Override
             public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
                 addPlayer(snapshot.getKey(), snapshot.getValue().toString());
-                if(snapshot.getKey().equals(playerKey)) {
-                    setTurnNow();
-                }
                 playerList.addPlayerToList(snapshot.getValue().toString());
+                if(snapshot.getKey().compareTo(playerKey) == 0)
+                    myTurn = 0;
+                else if (snapshot.getKey().compareTo(playerKey) < 0)
+                    myTurn++;
             }
 
             @Override
@@ -225,16 +227,19 @@ public class GameLogic {
                 throw new IllegalStateException("trumpListener cancelled");
             }
         });
-        dealerToChoseTrumpListener = sessionReference.child("trump").addValueEventListener(new ValueEventListener() {
+        dealerToChooseTrumpListener = sessionReference.child("dealerToChooseTrump").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if(snapshot.getValue() != null)
-                    return; // TODO implement gui for this
+                    if(snapshot.getValue(int.class) == myTurn) {
+                        Log.d("wizardtrump", "myturn is: "+myTurn);
+                        mainActivity.askToChooseTrump();
+                    }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                throw new IllegalStateException("dealerToChoseTrumpListener cancelled");
+                throw new IllegalStateException("dealerToChooseTrumpListener cancelled");
             }
         });
     }
@@ -330,17 +335,19 @@ public class GameLogic {
             sessionReference.child("hands").child(playerKey).setValue(hands.get(handNum++));
         }
         Card trump = deck.getNext();
+        setTrump(trump);
         if(trump.getType() == "wizard")
             // this just updates 'dealerToChoseTrump' to current dealers turn number which every child is
             // listening for, compares with own turn number and then sets trump from its end when equal
-            // TODO create appropriate listener
-            sessionReference.child("dealerToChoseTrump").setValue((roundNumber - 1) % getConnectedPlayerCount());
-        else
-            setLead(trump);
+            // the formula for determining the dealer is:
+            //      roundnumber - 1 to get back to 0 indexed (turns are 0 indexed, rounds 1 indexed)
+            //      then -1 because dealer is the player before the one with the first turn
+            //      lastly modulus with playercount
+            sessionReference.child("dealerToChooseTrump").setValue((getConnectedPlayerCount() + roundNumber - 2) % getConnectedPlayerCount());
     }
 
-    public void setLead(Card lead) {
-        sessionReference.child("trump").setValue(lead);
+    public void setTrump(Card trump) {
+        sessionReference.child("trump").setValue(trump);
     }
 
     public void addPlayer(String key, String playerName) {
@@ -349,10 +356,6 @@ public class GameLogic {
     }
     public void removePlayer(String key) {
         connectedPlayersDict.remove(key);
-    }
-
-    public void setTurnNow() {
-        myTurn = currentSession.playerCount-1;
     }
 
     private static String generateSessionId() {

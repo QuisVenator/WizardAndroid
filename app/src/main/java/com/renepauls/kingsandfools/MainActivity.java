@@ -16,6 +16,7 @@ import android.view.ViewGroup;
 import android.view.ViewGroupOverlay;
 import android.view.ViewTreeObserver;
 import android.view.animation.LayoutAnimationController;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -33,6 +34,8 @@ public class MainActivity extends AppCompatActivity {
     private static double cardAspectRatio = 208.0/303.0;
     private float screenWidth;
     private float screenHeight;
+    int cardWidth;
+    int cardHeight;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +46,8 @@ public class MainActivity extends AppCompatActivity {
         final DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
         screenWidth = displayMetrics.widthPixels;
         screenHeight = displayMetrics.heightPixels;
+        cardWidth = (int) (screenWidth / 4.5);
+        cardHeight = (int) (screenWidth / 4.5 / cardAspectRatio);
 
         Deck.initialize(getApplicationContext());
         app.gameLogic.mainActivity = this;
@@ -57,8 +62,6 @@ public class MainActivity extends AppCompatActivity {
 
         LinearLayout cardsParent2 = findViewById(R.id.cardsParentRow2);
         int previousId = -1;
-        int cardWidth = (int) (screenWidth / 4.5);
-        int cardHeight = (int) (screenWidth / 4.5 / cardAspectRatio);
         int minLeftMargin = cardWidth / 2;
         int noScrollMargin = (int) ((screenWidth - cardWidth) / (cards.size() - 1));
         int leftMargin = Integer.max(minLeftMargin, noScrollMargin);
@@ -85,31 +88,6 @@ public class MainActivity extends AppCompatActivity {
             else
                 handler.postDelayed(() -> cardsParent2.addView(card), 200*i + 1000);
         }
-    }
-
-    private void clearCards(View view) {
-        ViewGroup[] rows = {
-                findViewById(R.id.cardsParentRow1),
-                findViewById(R.id.cardsParentRow2),
-                findViewById(R.id.playedCardsRow)
-        };
-        Handler handler = new Handler();
-
-        int counter = 0;
-        for(ViewGroup row : rows) {
-            int cardsInRow = row.getChildCount();
-            for(int i = cardsInRow-1; i >= 0; i--) {
-                View card = row.getChildAt(i);
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        row.removeView(card);
-                    }
-                }, (cardsInRow-i+counter)*100);
-            }
-            counter += row.getChildCount();
-        }
-        ((ViewGroup)findViewById(R.id.mainLayout)).getOverlay().clear();
     }
 
     public void onCardSelected(View card) {
@@ -168,11 +146,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void hostNewGame(View view) {
-        /*
-        String id = "JMY9I";
-        gameLogic.joinGame(id);
-        */
-
         String id = app.gameLogic.hostGame();
 
         Toast toast = Toast.makeText(getApplicationContext(), id,
@@ -182,8 +155,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setTrump(Card trumpCard) {
-        int cardWidth = (int) (screenWidth / 4.5);
-        int cardHeight = (int) (screenWidth / 4.5 / cardAspectRatio);
         ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(cardWidth, cardHeight);
         ConstraintLayout trumpCardLayout = findViewById(R.id.trumpCardLayout);
         ImageView cardView = new ImageView(this);
@@ -195,6 +166,60 @@ public class MainActivity extends AppCompatActivity {
         trumpCardLayout.addView(cardView);
     }
 
+    public void askToChooseTrump() {
+        findViewById(R.id.chooseTrumpLayout).setVisibility(View.VISIBLE);
+    }
+    public void selectTrump(View view) {
+        char selected = ((Button)view).getText().charAt(0);
+        int resId;
+        switch (selected){
+            case '♠':
+                resId = getApplicationContext().getResources().getIdentifier("spades_generic", "drawable", getApplicationContext().getPackageName());
+                app.gameLogic.setTrump(new Card("spades", 0, "spades_generic", resId));
+                break;
+            case '♥':
+                resId = getApplicationContext().getResources().getIdentifier("hearts_generic", "drawable", getApplicationContext().getPackageName());
+                app.gameLogic.setTrump(new Card("hearts", 0, "hearts_generic", resId));
+                break;
+            case '♦':
+                resId = getApplicationContext().getResources().getIdentifier("diamonds_generic", "drawable", getApplicationContext().getPackageName());
+                app.gameLogic.setTrump(new Card("diamonds", 0, "diamonds_generic", resId));
+                break;
+            case '♣':
+                resId = getApplicationContext().getResources().getIdentifier("clubs_generic", "drawable", getApplicationContext().getPackageName());
+                app.gameLogic.setTrump(new Card("clubs", 0, "clubs_generic", resId));
+                break;
+        }
+        findViewById(R.id.chooseTrumpLayout).setVisibility(View.GONE);
+    }
+
+    private void clearCards(View view) {
+        ViewGroup[] rows = {
+                findViewById(R.id.cardsParentRow1),
+                findViewById(R.id.cardsParentRow2),
+                findViewById(R.id.playedCardsRow)
+        };
+        Handler handler = new Handler();
+
+        int counter = 0;
+        for(ViewGroup row : rows) {
+            int cardsInRow = row.getChildCount();
+            for(int i = cardsInRow-1; i >= 0; i--) {
+                View card = row.getChildAt(i);
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        row.removeView(card);
+                    }
+                }, (cardsInRow-i+counter)*100);
+            }
+            counter += row.getChildCount();
+        }
+        ((ViewGroup)findViewById(R.id.mainLayout)).getOverlay().clear();
+    }
+    private void initializeTrumpOptions() {
+        LinearLayout trumpOptionsLayout = findViewById(R.id.trumpOptionsLayout);
+    }
 
     private float getAbsX( View view ) {
         if(view.getParent() == view.getRootView())
@@ -208,4 +233,5 @@ public class MainActivity extends AppCompatActivity {
         else
             return view.getY() + getAbsY((View)view.getParent());
     }
+
 }
