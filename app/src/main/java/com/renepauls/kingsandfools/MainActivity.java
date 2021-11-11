@@ -33,7 +33,6 @@ public class MainActivity extends AppCompatActivity {
     private static double cardAspectRatio = 208.0/303.0;
     private float screenWidth;
     private float screenHeight;
-    private Deck cardDeck = new Deck();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,14 +45,15 @@ public class MainActivity extends AppCompatActivity {
         screenHeight = displayMetrics.heightPixels;
 
         Deck.initialize(getApplicationContext());
+        app.gameLogic.mainActivity = this;
     }
 
     public void addCards(List<Card> cards) {
         LinearLayout cardsParent = findViewById(R.id.cardsParentRow1);
         if(cardsParent.getChildCount() > 0) {
-            Log.d("GiveCards", "Tried to give cards to non-empty hand");
-            return;
+            Log.d("GiveCards", "Tried to give cards to non-empty hand...clearing");
         }
+        clearCards(null);
 
         LinearLayout cardsParent2 = findViewById(R.id.cardsParentRow2);
         int previousId = -1;
@@ -81,13 +81,13 @@ public class MainActivity extends AppCompatActivity {
             card.setLayoutParams(params);
 
             if(i < 10)
-                handler.postDelayed(() -> cardsParent.addView(card), 200*i);
+                handler.postDelayed(() -> cardsParent.addView(card), 200*i + 1000);
             else
-                handler.postDelayed(() -> cardsParent2.addView(card), 200*i);
+                handler.postDelayed(() -> cardsParent2.addView(card), 200*i + 1000);
         }
     }
 
-    public void clearCards(View view) {
+    private void clearCards(View view) {
         ViewGroup[] rows = {
                 findViewById(R.id.cardsParentRow1),
                 findViewById(R.id.cardsParentRow2),
@@ -105,22 +105,11 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         row.removeView(card);
                     }
-                }, (cardsInRow-i+counter)*200);
+                }, (cardsInRow-i+counter)*100);
             }
             counter += row.getChildCount();
         }
         ((ViewGroup)findViewById(R.id.mainLayout)).getOverlay().clear();
-    }
-
-    public void giveCards(View view) {
-        int testCardsN = 6;
-        List<Card> testCards = new ArrayList<>();
-        cardDeck.shuffle();
-        for(int i = 0; i < testCardsN; i++) {
-            testCards.add(cardDeck.get(i));
-        }
-
-        addCards(testCards);
     }
 
     public void onCardSelected(View card) {
@@ -174,6 +163,10 @@ public class MainActivity extends AppCompatActivity {
         toast.show();
     }
 
+    public void giveCards(View view) {
+        app.gameLogic.dealCards();
+    }
+
     public void hostNewGame(View view) {
         /*
         String id = "JMY9I";
@@ -188,6 +181,20 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void setTrump(Card trumpCard) {
+        int cardWidth = (int) (screenWidth / 4.5);
+        int cardHeight = (int) (screenWidth / 4.5 / cardAspectRatio);
+        ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(cardWidth, cardHeight);
+        ConstraintLayout trumpCardLayout = findViewById(R.id.trumpCardLayout);
+        ImageView cardView = new ImageView(this);
+        cardView.setTag(trumpCard.getResourceName());
+        cardView.setId(View.generateViewId());
+        cardView.setImageResource(trumpCard.getResId());
+        cardView.setClickable(false);
+        cardView.setLayoutParams(params);
+        trumpCardLayout.addView(cardView);
+    }
+
 
     private float getAbsX( View view ) {
         if(view.getParent() == view.getRootView())
@@ -195,7 +202,6 @@ public class MainActivity extends AppCompatActivity {
         else
             return view.getX() + getAbsX((View)view.getParent());
     }
-
     private float getAbsY(View view) {
         if(view.getParent() == view.getRootView())
             return view.getY();

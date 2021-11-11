@@ -12,6 +12,7 @@ public class Deck {
     private static final String[] sets = {"clubs", "diamonds", "hearts", "spades"};
     private static Map<String, Card> availableCards;
     private List<Card> shuffled;
+    private int index = 0;
 
     public static void initialize(Context context) {
         availableCards = new HashMap<>();
@@ -34,14 +35,35 @@ public class Deck {
         Collections.shuffle(shuffled);
     }
 
-    public Card get(int i) {
+    private Card get(int i) {
         if (shuffled == null) {
             shuffle();
         }
         return shuffled.get(i);
     }
+    public Card getNext() {
+        if (index >= 60) {
+            return null;
+        }
+        return get(index++);
+    }
 
     public static Card getCardFromResourceName(String resourceName) {
         return availableCards.get(resourceName);
+    }
+
+    public List<Hand> getHands(int handNumber, int cardsPerHand) {
+        if(handNumber * cardsPerHand + index > 60)
+            throw new IndexOutOfBoundsException("Not enough cards in hand!");
+
+        List<Hand> hands = new ArrayList<>();
+        for(int i = 0; i < handNumber; i++) {
+            Hand hand = new Hand();
+            for(int j = 0; j < cardsPerHand; j++) {
+                hand.add(getNext());
+            }
+            hands.add(hand);
+        }
+        return hands;
     }
 }

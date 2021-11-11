@@ -3,11 +3,12 @@ package com.renepauls.kingsandfools;
 import androidx.annotation.Nullable;
 
 public class Card {
-    private final String type;
-    private final int value;
-    private final String resourceName;
-    private final int resId;
+    private String type;
+    private int value;
+    private String resourceName;
+    private int resId;
 
+    public Card() {}
     public Card (String type, int value, String resourceName, int resId) {
         this.resourceName = resourceName;
         this.value = value;
@@ -28,6 +29,18 @@ public class Card {
     }
     public int getResId() {
         return resId;
+    }
+    public void setValue(int value) {
+        this.value = value;
+    }
+    public void setType(String type) {
+        this.type = type;
+    }
+    public void setResourceName(String resourceName) {
+        this.resourceName = resourceName;
+    }
+    public void setResId(int resId) {
+        this.resId = resId;
     }
 
     @Override

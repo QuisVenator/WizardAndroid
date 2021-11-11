@@ -27,6 +27,8 @@ public class GameLogic {
     private String leading = null;
     private String name = "Anonimous";
     private Card currentWinning;
+    private Hand currentHand;
+    private int roundNumber = 0;
 
     private static final int sessionIdCharacterCount = 5;
     private static final String validSessionCharacters = "ABCDEFGHIJKLMNPQRSTUVWXYZ123456789";
@@ -38,12 +40,16 @@ public class GameLogic {
     private ValueEventListener turnListener;
     private ValueEventListener cardPlayedListener;
     private ValueEventListener startGameListener;
+    private ValueEventListener handListener;
+    private ValueEventListener trumpListener;
+    private ValueEventListener dealerToChoseTrumpListener;
     private int myTurn;
     private String playerKey;
     private HashMap<String, String> connectedPlayersDict = new HashMap<>();
 
-    //TODO this is bad, do MVVM
+    //TODO this is (probably) bad
     public LobbyActivity lobbyActivity = null;
+    public MainActivity mainActivity = null;
 
     public String getSessionId() {
         return sessionId;
@@ -191,9 +197,50 @@ public class GameLogic {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // TODO throw exception?
+                throw new IllegalStateException("startGameListener cancelled");
             }
         });
+        handListener = sessionReference.child("hands").child(playerKey).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                Log.d("dealcards", "onDataChange fired!!!");
+                setCurrentHand((Hand)snapshot.getValue(Hand.class));
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                throw new IllegalStateException("handListener cancelled");
+            }
+        });
+        trumpListener = sessionReference.child("trump").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(snapshot.getValue() != null)
+                    mainActivity.setTrump(snapshot.getValue(Card.class));
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                throw new IllegalStateException("trumpListener cancelled");
+            }
+        });
+        dealerToChoseTrumpListener = sessionReference.child("trump").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                // TODO implement gui for this
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                throw new IllegalStateException("dealerToChoseTrumpListener cancelled");
+            }
+        });
+    }
+
+    private void setCurrentHand(Hand hand) {
+        currentHand = hand;
+        if(currentHand != null)
+            mainActivity.addCards(currentHand.getCardsInHand());
     }
 
     public int getConnectedPlayerCount() {
@@ -263,6 +310,37 @@ public class GameLogic {
         sessionReference.updateChildren(childUpdates);
     }
 
+    public void dealCards() {
+        if(!isHost()) {
+            throw new IllegalStateException("Only host can deal cards!");
+        }
+
+        ++roundNumber;
+        if (60 / roundNumber < getConnectedPlayerCount()) {
+            // TODO end game
+            return;
+        }
+        Deck deck = new Deck();
+        deck.shuffle();
+        List<Hand> hands = deck.getHands(getConnectedPlayerCount(), roundNumber);
+        int handNum = 0;
+        for(String playerKey : connectedPlayersDict.keySet()) {
+            sessionReference.child("hands").child(playerKey).setValue(hands.get(handNum++));
+        }
+        Card trump = deck.getNext();
+        if(trump.getType() == "wizard")
+            // this just updates 'dealerToChoseTrump' to current dealers turn number which every child is
+            // listening for, compares with own turn number and then sets trump from its end when equal
+            // TODO create appropriate listener
+            sessionReference.child("dealerToChoseTrump").setValue((roundNumber - 1) % getConnectedPlayerCount());
+        else
+            setTrump(trump);
+    }
+
+    public void setTrump(Card trump) {
+        sessionReference.child("trump").setValue(trump);
+    }
+
     public void addPlayer(String key, String playerName) {
         connectedPlayersDict.put(key, playerName);
         currentSession.playerCount++;
@@ -317,6 +395,10 @@ public class GameLogic {
         if(startGameListener != null) {
             sessionReference.child("open").removeEventListener(startGameListener);
             startGameListener = null;
+        }
+        if(handListener != null) {
+            sessionReference.child("cards").child(playerKey).removeEventListener(handListener);
+            handListener = null;
         }
     }
 }

@@ -8,6 +8,14 @@ import java.util.List;
 public class Hand {
     private List<Card> cardsInHand = new ArrayList<>();
 
+    public List<Card> getCardsInHand() {
+        return cardsInHand;
+    }
+
+    public void setCardsInHand(List<Card> cardsInHand) {
+        this.cardsInHand = cardsInHand;
+    }
+
     public Hand() {}
     public Hand(Collection<Card> cards) {
         cardsInHand = new ArrayList<>(cards);
