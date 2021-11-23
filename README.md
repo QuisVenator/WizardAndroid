@@ -2,13 +2,13 @@
 
 ## Roadmap
 ### Needed for minimum viable product
-- [ ] When dealing cards a trump is played (except last round)
-- [ ] When trump is jester, no trump is set
-- [ ] When trump is wizard, dealer choses card
- - [ ] Manage last round special case
- - [ ] Host keeps track of dealer
+- [X] When dealing cards a trump is played (except last round)
+- [X] When trump is jester, no trump is set
+- [X] When trump is wizard, dealer choses card
+ - [X] Manage last round special case #needs some testing maybe
+ - [X] Host keeps track of dealer
  - [ ] Dealer is determenid randomly at start of game
- - [ ] GUI for chosing trump
+ - [X] GUI for chosing trump
 - [ ] Players can place bids
  - [ ] GUI for placing bids
  - [ ] GUI to show bids placed
@@ -23,7 +23,6 @@
 - [ ] Players can create accounts
  - [ ] Adding and joining friends option
 - [ ] History of games played
-- [ ] Show each hand in front of player, not on top of each other
 - [ ] Player avatar options
 
 # Possible breaking updates:

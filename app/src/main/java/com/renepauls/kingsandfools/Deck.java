@@ -64,6 +64,10 @@ public class Deck {
         return availableCards.get(resourceName);
     }
 
+    public static Card getJester() {
+        return availableCards.get("jester");
+    }
+
     public List<Hand> getHands(int handNumber, int cardsPerHand) {
         if(handNumber * cardsPerHand + index > 60)
             throw new IndexOutOfBoundsException("Not enough cards in hand!");

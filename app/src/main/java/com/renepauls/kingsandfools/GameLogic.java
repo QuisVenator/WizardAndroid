@@ -349,6 +349,9 @@ public class GameLogic {
     }
 
     public void setTrump(Card trump) {
+        // Trump null means that this is the last round, so no trump is played, which is equal to a jester
+        if(trump == null)
+            trump = Deck.getJester();
         sessionReference.child("trump").setValue(trump);
     }
 
