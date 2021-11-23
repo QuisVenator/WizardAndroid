@@ -139,6 +139,8 @@ public class GameLogic {
             public void onChildRemoved(@NonNull DataSnapshot snapshot) {
                 removePlayer(snapshot.getKey());
                 playerList.removePlayerFromList(snapshot.getValue().toString());
+                if (snapshot.getKey().compareTo(playerKey) < 0)
+                    myTurn--;
             }
 
             @Override
